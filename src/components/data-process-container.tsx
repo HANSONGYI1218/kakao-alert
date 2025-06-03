@@ -1,14 +1,14 @@
 "use client";
 
 import * as XLSX from "xlsx";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { downloadExcel, extractTime } from "@/lib/utils";
 import { format, parse } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
@@ -20,7 +20,7 @@ const DataProcessSchema = z.object({
 type RowData = Record<string, any>;
 
 export default function DataProcessContainer() {
-  const [excelData, setExcelData] = useState<RowData[]>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const form = useForm<z.infer<typeof DataProcessSchema>>({
     resolver: zodResolver(DataProcessSchema),
     defaultValues: {
@@ -86,7 +86,6 @@ export default function DataProcessContainer() {
           // 여러 명일 경우 → 가장 빠른 시간 찾기
           const sorted = rows.sort((a, b) => extractTime(a["시작일"]) - extractTime(b["시작일"]));
           const mainRow = sorted[0];
-          const others = sorted.slice(1);
 
           const allNames = rows.map((r) => r["환자명"]);
           mainRow["환자명"] = allNames.join(", ");
@@ -145,9 +144,14 @@ export default function DataProcessContainer() {
     reader.readAsArrayBuffer(file);
   }
 
+  const excelFileWatch = useWatch({
+    control: form.control,
+    name: "excelFile",
+  });
+
   useEffect(() => {
     onSubmit();
-  }, [form.watch("excelFile")]);
+  }, [excelFileWatch, onSubmit]);
 
   return (
     <Form {...form}>
@@ -160,8 +164,8 @@ export default function DataProcessContainer() {
               <div className="mx-auto flex w-1/2 items-center gap-6">
                 <Input
                   className="h-16 flex-1 rounded-full bg-white px-6"
+                  readOnly
                   value={field?.value?.name ?? ""}
-                  defaultValue={""}
                   placeholder="파일을 선택하세요."
                 />
                 <Button
@@ -169,6 +173,9 @@ export default function DataProcessContainer() {
                   id="input"
                   onClick={() => {
                     form.reset();
+                    if (inputRef.current) {
+                      inputRef.current.value = ""; // 중요: 파일 input 초기화
+                    }
                   }}
                   variant={"destructive"}
                   className="relative h-16 w-16"
@@ -181,6 +188,7 @@ export default function DataProcessContainer() {
                     업로드
                   </label>
                   <input
+                    ref={inputRef}
                     type="file"
                     id="excel"
                     accept=".xlsx, .xls, .csv"

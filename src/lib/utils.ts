@@ -14,6 +14,7 @@ export function extractTime(str: string): number {
   const timePart = str.split(" ")[1] + " " + str.split(" ")[2]; // '오전 11:30'
 
   const [ampm, hm] = timePart.split(" ");
+  // eslint-disable-next-line prefer-const
   let [h, m] = hm.split(":").map(Number);
 
   if (ampm === "오후" && h < 12) h += 12;
@@ -30,10 +31,15 @@ export const downloadExcel = (data: any[], originalFilename: string) => {
 
   // 원래 파일명에서 확장자 제거하고 '_final.xlsx' 추가
   const baseName = originalFilename.replace(/\.[^/.]+$/, "");
-  const finalFileName = `${baseName}_final.xlsx`;
+  const finalFileName = `${baseName}_final${generate4DigitCode()}.xlsx`;
 
   const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
   const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
 
   saveAs(blob, finalFileName);
 };
+
+export function generate4DigitCode(): string {
+  const code = Math.floor(Math.random() * 10000); // 0~9999
+  return code.toString().padStart(4, "0");
+}
