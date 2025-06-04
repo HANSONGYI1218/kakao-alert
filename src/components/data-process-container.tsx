@@ -3,15 +3,16 @@
 import * as XLSX from "xlsx";
 import { useEffect, useRef } from "react";
 import { downloadExcel, extractTime } from "@/lib/utils";
-import { format, parse } from "date-fns";
-import { ko } from "date-fns/locale";
+import * as iconv from "iconv-lite";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Upload } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
+import { format, parse } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { ko } from "date-fns/locale";
 
 const DataProcessSchema = z.object({
   excelFile: z.instanceof(File),
@@ -32,16 +33,50 @@ export default function DataProcessContainer() {
     const file = form.getValues("excelFile");
     if (!file) return;
 
-    console.log("데이터 가공 시작");
+    const fileName = file.name.toLowerCase();
+    const isCsv = fileName.endsWith(".csv");
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+
+    if (isCsv) {
+      console.log("isCsv", isCsv);
+      reader.onload = (evt) => {
+        const arrayBuffer = evt.target?.result as ArrayBuffer;
+        const buffer = Buffer.from(arrayBuffer); // Node 환경 아니어도 Uint8Array로 가능
+
+        // CP949 → UTF-8 변환
+        const utf8String = iconv.decode(buffer, "cp949");
+
+        console.log("utf8String 예시:", utf8String.slice(0, 200));
+
+        // 이제 XLSX 라이브러리로 CSV 읽기
+        const workbook = XLSX.read(utf8String, {
+          type: "string",
+          raw: false,
+        });
+
+        // XLSX 변환 버퍼 생성
+        const xlsxBuffer = XLSX.write(workbook, {
+          type: "array",
+          bookType: "xlsx",
+        });
+
+        processWorkbook(xlsxBuffer);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload = (evt) => {
+        const buffer = new Uint8Array(evt.target?.result as ArrayBuffer);
+        processWorkbook(buffer);
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function processWorkbook(data: Uint8Array | ArrayBuffer) {
       const workbook = XLSX.read(data, { type: "array", codepage: 65001 });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const json: RowData[] = XLSX.utils.sheet_to_json(worksheet);
-
       console.log("예취 삭제");
       // 1단계: 예취 삭제
       const filtered = json.filter((row) => row["보호자ID"] !== "182");
@@ -139,9 +174,7 @@ export default function DataProcessContainer() {
       });
 
       downloadExcel(newData, file.name);
-    };
-
-    reader.readAsArrayBuffer(file);
+    }
   }
 
   const excelFileWatch = useWatch({
