@@ -79,7 +79,7 @@ export default function DataProcessContainer() {
       const json: RowData[] = XLSX.utils.sheet_to_json(worksheet);
       console.log("예취 삭제");
       // 1단계: 예취 삭제
-      const filtered = json.filter((row) => row["보호자ID"] !== "182");
+      const filtered = json.filter((row) => (row["환자명"] ?? "").trim() !== "예취");
 
       console.log("보호자ID + 환자명 기준으로 빠른 시간만 남기기");
       // 2단계: 보호자ID + 환자명 기준으로 빠른 시간만 남기기
@@ -129,9 +129,20 @@ export default function DataProcessContainer() {
         }
       });
 
+      const updatedRows = finalRows.map((row: any) => {
+        const memo = row["예약메모"] ?? "";
+        const pattern = /\*\s*\d/; // * 뒤에 숫자가 오는 경우 감지 (*9, * 10 등)
+
+        const 추정시간 = pattern.test(memo) ? memo : "";
+
+        return {
+          ...row,
+          추정시간,
+        };
+      });
       console.log("3단계: 환자명, 핸드폰, 시작일만 남김");
       // 3단계: 환자명, 핸대폰, 시작일만 남김
-      const deletdRows = finalRows.map((row) => {
+      const deletdRows = updatedRows.map((row) => {
         delete row["보호자명"];
         delete row["종"];
         delete row["품종"];
@@ -146,7 +157,7 @@ export default function DataProcessContainer() {
         return row;
       });
 
-      const newData = deletdRows.map((row) => {
+      let newData = deletdRows.map((row) => {
         console.log(" 4단계: 핸드폰, 환자명, 날짜, 시작일 순으로 새롭게 열 추가");
         // 4단계: 핸드폰, 환자명, 날짜, 시작일 순으로 새롭게 열 추가
         const startDate: string = row["시작일"] ?? "";
@@ -162,16 +173,28 @@ export default function DataProcessContainer() {
         // 5단계: 시작일 시간만 남김
         const timeStr: string = row["시작일"]; // 예: '2025-05-06 오후 4시'
         const timeOnly = timeStr?.split(" ").slice(1).join(" ") || ""; // '오후 4시'
-        // 5단계: 환자명 기호 삭제
-        const cleanedName = (row["환자명"] ?? "").replace(/[^\p{L}\p{N},\s]/gu, "");
+        // 5단계: 환자명 기호 삭제 + 괄호 안 내용 제거
+        const cleanedName = (row["환자명"] ?? "")
+          .replace(/\(.*?\)/g, "") // 괄호로 시작해서 닫히는 괄호까지 제거
+          .replace(/[^\p{L}\p{N},\s]/gu, ""); // 그 외 기호 제거
 
         return {
           핸드폰: row["핸드폰"],
           환자명: cleanedName,
           날짜: result, // 새 열 추가
           시작일: timeOnly,
+          추정시간: row["추정시간"],
         };
       });
+
+      // ✅ 모든 행의 추정시간이 빈 문자열이면 열 제거
+      const allEmpty = newData.every((row) => !row["추정시간"]);
+      if (allEmpty) {
+        newData = newData.map((row) => {
+          delete row["추정시간"];
+          return row;
+        });
+      }
 
       downloadExcel(newData, file.name);
     }
