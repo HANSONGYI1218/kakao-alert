@@ -196,6 +196,22 @@ export default function DataProcessContainer() {
         });
       }
 
+      // ✅ "시작일" 시간 기준으로 오름차순 정렬
+newData.sort((a, b) => {
+  const parseKoreanTime = (timeStr: string) => {
+    try {
+      return parse(timeStr, "a h:mm", new Date(), { locale: ko }).getTime();
+    } catch {
+      return 0;
+    }
+  };
+
+  const timeA = parseKoreanTime(a["시작일"] ?? "");
+  const timeB = parseKoreanTime(b["시작일"] ?? "");
+
+  return timeA - timeB;
+});
+
       downloadExcel(newData, file.name);
     }
   }
