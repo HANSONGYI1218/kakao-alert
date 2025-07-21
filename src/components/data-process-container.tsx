@@ -131,8 +131,8 @@ export default function DataProcessContainer() {
 
       const updatedRows = finalRows.map((row: any) => {
         const memo = row["예약메모"] ?? "";
-        const pattern = /\*\s*\d/; // * 뒤에 숫자가 오는 경우 감지 (*9, * 10 등)
-
+        const pattern = /\*\s*\d+[^\s]*/;
+        
         const 추정시간 = pattern.test(memo) ? memo : "";
 
         return {
