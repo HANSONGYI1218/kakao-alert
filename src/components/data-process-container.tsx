@@ -79,7 +79,7 @@ export default function DataProcessContainer() {
       const json: RowData[] = XLSX.utils.sheet_to_json(worksheet);
       console.log("예취 삭제");
       // 1단계: 예취 삭제
-const excludeIds = ["11867", "4267"];
+const excludeIds = ["11867", "4267", "182"];
 
 const filtered = json.filter(
   (row) => !excludeIds.includes(String(row["보호자ID"] ?? "").trim())
