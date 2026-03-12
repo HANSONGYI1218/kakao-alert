@@ -43,3 +43,22 @@ export function generate4DigitCode(): string {
   const code = Math.floor(Math.random() * 10000); // 0~9999
   return code.toString().padStart(4, "0");
 }
+
+export function excelDateToJSDate(serial: number) {
+  const utc_days = Math.floor(serial - 25569);
+  const utc_value = utc_days * 86400;
+  const date = new Date(utc_value * 1000);
+
+  const fractional_day = serial - Math.floor(serial);
+  const total_seconds = Math.floor(86400 * fractional_day);
+
+  const seconds = total_seconds % 60;
+  const hours = Math.floor(total_seconds / 3600);
+  const minutes = Math.floor(total_seconds / 60) % 60;
+
+  date.setHours(hours);
+  date.setMinutes(minutes);
+  date.setSeconds(seconds);
+
+  return date;
+}

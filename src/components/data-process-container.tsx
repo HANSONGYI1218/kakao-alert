@@ -2,7 +2,7 @@
 
 import * as XLSX from "xlsx";
 import { useEffect, useRef } from "react";
-import { downloadExcel, extractTime } from "@/lib/utils";
+import { downloadExcel, excelDateToJSDate, extractTime } from "@/lib/utils";
 import * as iconv from "iconv-lite";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -160,25 +160,35 @@ export default function DataProcessContainer() {
       let newData = deletdRows.map((row) => {
         console.log(" 4단계: 핸드폰, 환자명, 날짜, 시작일 순으로 새롭게 열 추가");
         // 4단계: 핸드폰, 환자명, 날짜, 시작일 순으로 새롭게 열 추가
-        const startDate: string = row["시작일"] ?? "";
-        console.log("startDate:,", startDate);
-        const parsedDate = parse(startDate, "yyyy-MM-dd a h:mm", new Date(), { locale: ko });
-        if (isNaN(parsedDate.getTime())) {
-          console.error("잘못된 날짜 포맷:", startDate);
-        }
+        const startDate = row["시작일"] ?? "";
+
+        let parsedDate: Date;
+
+if (typeof startDate === "number") {
+  parsedDate = excelDateToJSDate(startDate);
+} else {
+  parsedDate = parse(startDate, "yyyy-MM-dd a h:mm", new Date(), { locale: ko });
+}
+        console.log("parsedDate:,", parsedDate);
+
 
         const result = format(parsedDate, "M월 d일 (EEE)", { locale: ko }); // 이렇게 바로
 
         console.log("5단계: 시작일 시간만 남김, 환자명 기호 삭제");
         // 5단계: 시작일 시간만 남김
-        const timeStr: string = row["시작일"]; // 예: '2025-05-06 오후 4시'
-     const parts = timeStr?.split(" ") || [];
+      const hour = parsedDate.getHours();
+const minute = parsedDate.getMinutes();
 
-const hour24 = Number(parts[1]?.split(":")[0]);
-const period = hour24 >= 12 ? "오후" : "오전";
-const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+const period = hour >= 12 ? "오후" : "오전";
+const hour12 = hour % 12 === 0 ? 12 : hour % 12;
 
-const timeOnly = `${period} ${hour12}시`;
+let timeOnly;
+
+if (minute === 0) {
+  timeOnly = `${period} ${hour12}시`;
+} else {
+  timeOnly = `${period} ${hour12}:${minute.toString().padStart(2, "0")}`;
+}
         // 5단계: 환자명 기호 삭제 + 괄호 안 내용 제거
         const cleanedName = (row["환자명"] ?? "")
           .replace(/\(.*?\)/g, "") // 괄호로 시작해서 닫히는 괄호까지 제거
