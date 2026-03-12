@@ -79,10 +79,10 @@ export default function DataProcessContainer() {
       const json: RowData[] = XLSX.utils.sheet_to_json(worksheet);
       console.log("예취 삭제");
       // 1단계: 예취 삭제
+const excludeIds = ["11867", "4267"];
+
 const filtered = json.filter(
-  (row) =>
-    (row["보호자ID"] ?? "").trim() !== "11867" &&
-    (row["보호자ID"] ?? "").trim() !== "4267"
+  (row) => !excludeIds.includes(String(row["보호자ID"] ?? "").trim())
 );
       console.log("보호자ID + 환자명 기준으로 빠른 시간만 남기기");
       // 2단계: 보호자ID + 환자명 기준으로 빠른 시간만 남기기
