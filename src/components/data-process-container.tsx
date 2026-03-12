@@ -172,7 +172,13 @@ export default function DataProcessContainer() {
         console.log("5단계: 시작일 시간만 남김, 환자명 기호 삭제");
         // 5단계: 시작일 시간만 남김
         const timeStr: string = row["시작일"]; // 예: '2025-05-06 오후 4시'
-        const timeOnly = timeStr?.split(" ").slice(1).join(" ") || ""; // '오후 4시'
+     const parts = timeStr?.split(" ") || [];
+
+const hour24 = Number(parts[1]?.split(":")[0]);
+const period = hour24 >= 12 ? "오후" : "오전";
+const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+
+const timeOnly = `${period} ${hour12}시`;
         // 5단계: 환자명 기호 삭제 + 괄호 안 내용 제거
         const cleanedName = (row["환자명"] ?? "")
           .replace(/\(.*?\)/g, "") // 괄호로 시작해서 닫히는 괄호까지 제거
